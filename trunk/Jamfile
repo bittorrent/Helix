@@ -1,0 +1,93 @@
+# this build file requres boost-build v2.
+# invoke like this:
+# bjam [compiler] [feature=value ...]
+
+# the name of the compiler is defined in your user-config.jam and depends
+# on which compilers you have installed. If you only have one, you can
+# omit this argument.
+
+# the possible features are defined below:
+
+import feature : feature ;
+
+feature enforce-interval : on off : composite propagated link-incompatible ;
+feature.compose <enforce-interval>off : <define>DISABLE_ENFORCE_INTERVAL ;
+
+feature fast-timeout : off on : composite propagated link-incompatible ;
+feature.compose <fast-timeout>on : <define>FAST_TIMEOUT ;
+
+feature save-state : on off : composite propagated link-incompatible ;
+feature.compose <save-state>off : <define>NO_SAVE_STATE ;
+
+feature dnadb : off on : composite propagated link-incompatible ;
+feature.compose <dnadb>off : <define>DISABLE_DNADB ;
+
+feature nat-check : on off : composite propagated link-incompatible ;
+feature.compose <nat-check>off : <define>DISABLE_NATCHECK ;
+
+feature foreground : off on : composite propagated link-incompatible ;
+feature.compose <foreground>on : <define>RUN_IN_FOREGROUND ;
+
+sources = 
+	authorizer
+	boost_utils
+	connection
+	connection_manager
+	control
+	cpu_monitor
+	dnadb
+	http_client
+	http_parser
+	natcheck
+	parsed_url
+	reply
+	request
+	request_handler
+	request_parser
+	server
+	sha
+	stats
+	swarm
+	utils
+	libtorrent/entry
+	libtorrent/escape_string
+	;
+
+lib mysql++ : : <name>mysqlpp <search>/opt/local/lib ;
+lib mysql : : <name>mysqlclient <search>/opt/local/lib/mysql5/mysql ;
+lib boost_date_time : : <name>boost_date_time-mt <search>/opt/local/lib ;
+lib boost_thread : : <name>boost_thread-mt <search>/opt/local/lib ;
+lib boost_program_options : : <name>boost_program_options-mt <search>/opt/local/lib ;
+lib boost_system : : <name>boost_system-mt <search>/opt/local/lib ;
+lib z : : <name>z <search>/opt/local/lib <link>static ;
+lib crypto : : <name>crypto <search>/opt/local/lib <link>static <use>z ;
+
+exe qps_tester
+	: src/qps_tester.cpp
+	  boost_system
+	: 
+	: <include>/opt/local/include
+	  <include>include
+	  <include>src
+	;
+
+exe helix_tracker
+	: src/$(sources).cpp
+	  helix/main.cpp
+	  helix/helix_handler.cpp
+	  boost_date_time
+	  boost_thread
+	  boost_system
+	  boost_program_options
+	  crypto # for SHA-1
+	: <dnadb>on:<library>mysql++
+	  <dnadb>on:<library>mysql
+	  <include>/opt/local/include
+	  <include>/opt/local/include/mysql++
+	  <include>/opt/local/include/mysql5/mysql
+	  <include>include
+	  <include>src
+	;
+
+install stage : helix_tracker qps_tester ;
+

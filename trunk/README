@@ -1,0 +1,109 @@
+
+BUILDING HELIX
+==============
+
+To build helix, you need boost version 1.36 or later and boost-build.
+
+If you install boost-build from source, make sure to configure which
+compiler(s) to use in user-config.jam (see boost-build documentation
+for more information).
+
+Specifically, you will need the following libraries from boost:
+	libboost_date_time-mt
+	libboost_program_options-mt
+	libboost_system-mt
+	libboost_thread-mt
+
+To build, cd into the helix root directory and invoke:
+
+	bjam [compiler] [debug|release] [feature=value ...]
+
+The compiler argument can be omitted if you only have one compiler
+configured or if you want to use your default compiler (as configured
+in user-config.jam).
+
+The debug or release option will determine if helix is built with
+debug symbols and no optimization, or with full optimization and
+no debug symbols. If you don't specify this, it defaults to build
+a debug build.
+
+The possible features and values to use are:
+
+enforce-interval: on|off
+	This controls whether or not the tracker will enforce the
+	interval returned to the announce. If the interval is enforced
+	and the client announces sooner than it's supposed to, the
+	tracker will response with an error code and no peers.
+	This defaults to on.
+
+fast-timeout: on|off
+	This feature controls how fast peers expire in the peer list.
+	It's only useful for debugging and testing purposes, it will
+	expire peers in 30 seconds instead of 30 minutes, to allow
+	replaying logs faster than real-time. It defaults to off.
+
+nat-check: on|off
+	This feature controls whether the tracker will perform NAT-checks
+	or not. A NAT-check is when the tracker will try to connect back
+	to the peer, to see if it's connectable or not. This is a relatively
+	expensive operation which might be useful to disable for high load
+	trackers. The benefit is that peers that are returned to the bittorrent
+	clients are more likely to be connectable. This defaults to on.
+
+foreground: on|off
+	This controls whether the main network loop is run in a background
+	thread or the main thread. When run in the foreground (main thread)
+	signals are not cought. This is only useful for debugging. It defaults
+	to off.
+
+dnadb: on|off
+	This option controls whether or not helix will maintaint a connection
+	to a mysql database for black-listing torrents that should not be tracked.
+	This is a BitTorrent DNA specific feature and is off by default.
+
+
+RUNNING HELIX
+=============
+
+The most basic way of running helix is to simply pass a single command line
+argument to it, the port number to listen on. This will start helix and make
+track any info-hash.
+
+For more options, and to run it as a background process, pass in --help on the
+command line for more options.
+
+--checkpoint-time
+	controls the frequency (interval in minutes) of checkpoints of the swarm states.
+	The checkpoint file does not include the full state of swarm, but enough to
+	bootstrap the tracker from if it goes down.
+
+--configfile
+	Specifies a file to set configuration options in the tracker. A sample config
+	file is 'helix.conf'. The mysql related settings are only used if built with
+	dnadb enabled.
+
+To collect statistics from the tracker, you can make a request for '/statistics'
+to the tracker. This will return number of lines, where each line is a name-colon-value
+pair. For example:
+
+	NatCheck created: 232
+	NatCheck deleted: 230
+
+To change settings while the tracker is running, request '/control'. This will
+return a list of properties that can be set through the control interface. By default,
+requests to the control interface can only be made from the localhost. This can be
+changed through a config file (see helix.conf).
+
+To change a setting, make a PUT request to '/control/set?<variable-name>=<value>'.
+You can set multiple variables with a single PUT request.
+
+All the settings that can be set through the control interface, can be set through
+the configuration file as well.
+
+To query flags for individual swarms, send a GET request for '/control/flags/<info-hash>',
+where info-hash is hex encoded.
+
+To change a flag for an individual swarm, send a PUT request to
+'/control/flags/<info-hash>?<flag-name>=[0|1]'.
+
+
